@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Taskify
+
+A modern task management system built with Next.js, React, and TypeScript. Taskify helps you organize, track, and manage your tasks efficiently with a clean and intuitive interface.
+
+## Description
+
+Taskify is a powerful task management application designed to streamline your workflow and boost productivity. Whether you're managing personal projects or team collaborations, Taskify provides the tools you need to stay organized and focused on what matters most.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed on your system:
+
+- [Node.js](https://nodejs.org/) (version 18 or higher)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/) package manager
+- [Git](https://git-scm.com/) for cloning the repository
 
 ## Getting Started
 
-First, run the development server:
+### Clone the Repository
+
+To get started with Taskify, clone the repository to your local machine:
+
+```bash
+git clone https://github.com/your-username/taskify-app.git
+```
+
+Or if you're using SSH:
+
+```bash
+git clone git@github.com:your-username/taskify-app.git
+```
+
+Navigate into the project directory:
+
+```bash
+cd taskify-app
+```
+
+### Install Dependencies
+
+Install all the required dependencies using npm:
+
+```bash
+npm install
+```
+
+Or if you prefer using yarn:
+
+```bash
+yarn install
+```
+
+### Run the Development Server
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Or with yarn:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+yarn dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The application will be available at [http://localhost:3000](http://localhost:3000). Open your browser and navigate to this URL to see Taskify in action.
 
-## Learn More
+### Build for Production
 
-To learn more about Next.js, take a look at the following resources:
+To create an optimized production build:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+To start the production server:
 
-## Deploy on Vercel
+```bash
+npm start
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Available Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run dev` - Starts the development server
+- `npm run build` - Creates an optimized production build
+- `npm start` - Starts the production server
+- `npm run lint` - Runs ESLint to check for code quality issues
+
+## Tech Stack
+
+- **Framework**: Next.js 16.0.3
+- **UI Library**: React 19.2.0
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS 4
+- **Linting**: ESLint
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is private and proprietary.
