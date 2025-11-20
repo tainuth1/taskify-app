@@ -1,37 +1,148 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { z } from "zod";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { signUpAsync, clearError } from "@/features/auth/authSlice";
+
+// Validation schema
+const signUpSchema = z.object({
+  name: z
+    .string()
+    .min(3, "Username must be at least 3 characters")
+    .max(20, "Username must be at most 20 characters")
+    .regex(
+      /^[a-zA-Z0-9_]+$/,
+      "Username can only contain letters, numbers, and underscores"
+    ),
+  email: z.string().email("Please enter a valid email address"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+    ),
+  terms: z.boolean().refine((val) => val === true, {
+    message: "You must agree to the Terms & Privacy",
+  }),
+});
+
+type SignUpFormData = z.infer<typeof signUpSchema>;
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
+    terms: false,
   });
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof SignUpFormData, string>>
+  >({});
+
+  const {
+    isLoading,
+    error: authError,
+    isAuthenticated,
+  } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+
+  // Redirect to workspace if authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/workspace");
+    }
+  }, [isAuthenticated, router]);
+
+  // Display auth errors
+  useEffect(() => {
+    if (authError) {
+      setErrors({ email: authError });
+    }
+  }, [authError]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+    const fieldValue = type === "checkbox" ? checked : value;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: fieldValue,
     }));
+
+    // Clear error for this field when user starts typing
+    if (errors[name as keyof SignUpFormData]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name as keyof SignUpFormData];
+        return newErrors;
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErrors({});
+    dispatch(clearError());
+
     try {
-      setIsLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setFormData({ name: "", email: "", password: "" });
+      // Validate form data
+      const validatedData = signUpSchema.parse(formData);
+
+      // Dispatch signup action
+      const result = await dispatch(
+        signUpAsync({
+          name: validatedData.name,
+          email: validatedData.email,
+          password: validatedData.password,
+        })
+      );
+
+      // Check if signup was successful
+      if (signUpAsync.fulfilled.match(result)) {
+        // Reset form on success
+        setFormData({ name: "", email: "", password: "", terms: false });
+        // Redirect will happen via useEffect when isAuthenticated becomes true
+      } else if (signUpAsync.rejected.match(result)) {
+        // Handle API errors
+        const errorMessage = result.payload?.message || "Signup failed";
+        
+        const apiErrors = result.payload?.errors;
+
+        if (apiErrors) {
+          // Map API field errors to form errors
+          const fieldErrors: Partial<Record<keyof SignUpFormData, string>> = {};
+          Object.entries(apiErrors).forEach(([field, messages]) => {
+            if (messages && messages.length > 0) {
+              fieldErrors[field as keyof SignUpFormData] = messages[0];
+            }
+          });
+          setErrors(fieldErrors);
+        } else {
+          setErrors({ email: errorMessage });
+        }
+      }
     } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
+      if (error instanceof z.ZodError) {
+        // Handle validation errors
+        const fieldErrors: Partial<Record<keyof SignUpFormData, string>> = {};
+        error.issues.forEach((issue) => {
+          if (issue.path[0]) {
+            fieldErrors[issue.path[0] as keyof SignUpFormData] = issue.message;
+          }
+        });
+        setErrors(fieldErrors);
+      } else {
+        console.error("Unexpected error:", error);
+        setErrors({ email: "An unexpected error occurred" });
+      }
     }
   };
 
@@ -60,8 +171,15 @@ export default function SignUpPage() {
               placeholder="Enter your username..."
               value={formData.name}
               onChange={handleInputChange}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 transition"
+              className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none transition ${
+                errors.name
+                  ? "border-red-500 focus:border-red-600"
+                  : "border-gray-300 focus:border-blue-600"
+              }`}
             />
+            {errors.name && (
+              <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+            )}
           </div>
 
           {/* Email Field */}
@@ -75,8 +193,15 @@ export default function SignUpPage() {
               placeholder="example@gmail.com"
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 transition"
+              className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none transition ${
+                errors.email
+                  ? "border-red-500 focus:border-red-600"
+                  : "border-gray-300 focus:border-blue-600"
+              }`}
             />
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+            )}
           </div>
 
           {/* Password Field */}
@@ -91,7 +216,11 @@ export default function SignUpPage() {
                 placeholder="••••••••••"
                 value={formData.password}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 transition pr-12"
+                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none transition pr-12 ${
+                  errors.password
+                    ? "border-red-500 focus:border-red-600"
+                    : "border-gray-300 focus:border-blue-600"
+                }`}
               />
               <button
                 type="button"
@@ -101,21 +230,34 @@ export default function SignUpPage() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
+            {errors.password && (
+              <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+            )}
           </div>
 
           {/* Terms Checkbox */}
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="terms"
-              className="w-4 h-4 rounded border-2 border-gray-300 cursor-pointer"
-            />
-            <label
-              htmlFor="terms"
-              className="text-sm text-gray-700 cursor-pointer"
-            >
-              I agree to the Terms & Privacy
-            </label>
+          <div>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="terms"
+                name="terms"
+                checked={formData.terms}
+                onChange={handleInputChange}
+                className={`w-4 h-4 rounded border-2 cursor-pointer ${
+                  errors.terms ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              <label
+                htmlFor="terms"
+                className="text-sm text-gray-700 cursor-pointer"
+              >
+                I agree to the Terms & Privacy
+              </label>
+            </div>
+            {errors.terms && (
+              <p className="text-red-500 text-sm mt-1">{errors.terms}</p>
+            )}
           </div>
 
           {/* Submit Button */}
