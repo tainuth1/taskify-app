@@ -7,8 +7,7 @@
  * @module services/apiClient
  */
 
-import { refreshToken } from "./authService";
-import { ApiError } from "./authService";
+import { refreshToken, ApiError } from "./authService";
 
 /**
  * API Base URL
@@ -22,61 +21,10 @@ import { ApiError } from "./authService";
 const API_URL =
   process.env.NODE_ENV === "production"
     ? process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
-    : ""; // Use relative URLs in development to leverage Next.js rewrites
+    : "";
 
-// Track if a token refresh is in progress to prevent multiple simultaneous refresh attempts
-let isRefreshing = false;
+// Track token refresh to prevent multiple simultaneous refresh attempts
 let refreshPromise: Promise<void> | null = null;
-
-/**
- * Queue of failed requests that should be retried after token refresh
- */
-const failedQueue: Array<{
-  resolve: (value: any) => void;
-  reject: (error: any) => void;
-  retry: () => Promise<any>;
-}> = [];
-
-/**
- * Process queued requests after successful token refresh
- */
-const processQueue = (error: ApiError | null) => {
-  failedQueue.forEach((promise) => {
-    if (error) {
-      promise.reject(error);
-    } else {
-      promise.resolve(promise.retry());
-    }
-  });
-  failedQueue.length = 0;
-};
-
-/**
- * Attempts to refresh the authentication token
- *
- * @returns Promise that resolves when token refresh is complete
- */
-const attemptTokenRefresh = async (): Promise<void> => {
-  if (isRefreshing && refreshPromise) {
-    return refreshPromise;
-  }
-
-  isRefreshing = true;
-  refreshPromise = (async () => {
-    try {
-      await refreshToken();
-      processQueue(null);
-    } catch (error) {
-      processQueue(error as ApiError);
-      throw error;
-    } finally {
-      isRefreshing = false;
-      refreshPromise = null;
-    }
-  })();
-
-  return refreshPromise;
-};
 
 /**
  * Makes an authenticated API request with automatic token refresh on 401 errors
@@ -118,31 +66,30 @@ export const apiClient = async <T = any>(
         "Content-Type": "application/json",
         ...options.headers,
       },
-      credentials: "include", // Always include cookies for authentication
+      credentials: "include",
     });
 
     const data = await response.json();
 
     // Handle 401 Unauthorized - token expired
     if (response.status === 401 && retryOn401) {
-      // If we're already refreshing, queue this request
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({
-            resolve,
-            reject,
-            retry: makeRequest,
-          });
-        });
+      // If refresh is in progress, wait for it and retry
+      if (refreshPromise) {
+        await refreshPromise;
+        return makeRequest();
       }
 
-      // Attempt to refresh token
+      // Start token refresh (shared promise for concurrent requests)
+      refreshPromise = refreshToken()
+        .then(() => {})
+        .finally(() => {
+          refreshPromise = null;
+        });
+
       try {
-        await attemptTokenRefresh();
-        // Retry the original request after successful refresh
+        await refreshPromise;
         return makeRequest();
-      } catch (refreshError) {
-        // Refresh failed, throw original error
+      } catch {
         const error: ApiError = {
           message: data.message || "Authentication failed",
           errors: data.errors,

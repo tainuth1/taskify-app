@@ -4,7 +4,6 @@ import Iridescence from "./i-ride-scence";
 import Link from "next/link";
 
 const WelcomeCard = () => {
-  console.log("Render");
   return (
     <div className="hidden md:flex md:w-1/2 bg-slate-200 rounded-2xl m-8 p-12 flex-col justify-between relative overflow-hidden">
       <div className="absolute inset-0">

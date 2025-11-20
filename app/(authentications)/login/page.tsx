@@ -1,17 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { z } from "zod";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { signInAsync, clearError } from "@/features/auth/authSlice";
+
+// Validation schema
+const signInSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z
+    .string()
+    .min(1, "Password is required")
+    .min(5, "Password must be at least 5 characters"),
+});
+
+type SignInFormData = z.infer<typeof signInSchema>;
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
-  const [isLoading, setLoading] = useState<boolean>(false);
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof SignInFormData, string>> & { general?: string }
+  >({});
+
+  const {
+    isLoading,
+    error: authError,
+    isAuthenticated,
+  } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+
+  // Redirect to workspace if authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/workspace");
+    }
+  }, [isAuthenticated, router]);
+
+  // Display auth errors
+  useEffect(() => {
+    if (authError) {
+      setErrors({ general: authError });
+    }
+  }, [authError]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -19,19 +58,80 @@ export default function LoginPage() {
       ...prev,
       [name]: value,
     }));
+
+    // Clear error for this field when user starts typing
+    if (errors[name as keyof typeof errors]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name as keyof typeof errors];
+        return newErrors;
+      });
+    }
+
+    // Clear general error
+    if (errors.general) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.general;
+        return newErrors;
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErrors({});
+    dispatch(clearError());
+
     try {
-      setLoading(true);
-      // Demo loading state, change to redux later
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setFormData({ email: "", password: "" });
+      // Validate form data with Zod
+      const validatedData = signInSchema.parse(formData);
+
+      // Dispatch signin action
+      const result = await dispatch(
+        signInAsync({
+          email: validatedData.email,
+          password: validatedData.password,
+        })
+      );
+
+      // Check if signin was successful
+      if (signInAsync.fulfilled.match(result)) {
+        // Reset form on success
+        setFormData({ email: "", password: "" });
+        // Redirect will happen via useEffect when isAuthenticated becomes true
+      } else if (signInAsync.rejected.match(result)) {
+        // Handle API errors
+        const errorMessage = result.payload?.message || "Signin failed";
+        const apiErrors = result.payload?.errors;
+
+        if (apiErrors) {
+          // Map API field errors to form errors
+          const fieldErrors: Partial<Record<keyof SignInFormData, string>> = {};
+          Object.entries(apiErrors).forEach(([field, messages]) => {
+            if (messages && messages.length > 0) {
+              fieldErrors[field as keyof SignInFormData] = messages[0];
+            }
+          });
+          setErrors(fieldErrors);
+        } else {
+          setErrors({ general: errorMessage });
+        }
+      }
     } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
+      if (error instanceof z.ZodError) {
+        // Handle validation errors
+        const fieldErrors: Partial<Record<keyof SignInFormData, string>> = {};
+        error.issues.forEach((issue) => {
+          if (issue.path[0]) {
+            fieldErrors[issue.path[0] as keyof SignInFormData] = issue.message;
+          }
+        });
+        setErrors(fieldErrors);
+      } else {
+        console.error("Unexpected error:", error);
+        setErrors({ general: "An unexpected error occurred" });
+      }
     }
   };
 
@@ -49,6 +149,13 @@ export default function LoginPage() {
 
         {/* Form */}
         <form className="space-y-5" onSubmit={handleSubmit}>
+          {/* General Error Message */}
+          {errors.general && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm">{errors.general}</p>
+            </div>
+          )}
+
           {/* Email Field */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -60,8 +167,15 @@ export default function LoginPage() {
               placeholder="example@gmail.com"
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 transition"
+              className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none transition ${
+                errors.email
+                  ? "border-red-500 focus:border-red-600"
+                  : "border-gray-300 focus:border-blue-600"
+              }`}
             />
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+            )}
           </div>
 
           {/* Password Field */}
@@ -84,7 +198,11 @@ export default function LoginPage() {
                 placeholder="••••••••••"
                 value={formData.password}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 transition pr-12"
+                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none transition pr-12 ${
+                  errors.password
+                    ? "border-red-500 focus:border-red-600"
+                    : "border-gray-300 focus:border-blue-600"
+                }`}
               />
               <button
                 type="button"
@@ -94,10 +212,13 @@ export default function LoginPage() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
+            {errors.password && (
+              <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+            )}
           </div>
 
           {/* Terms Checkbox */}
-          <div className="flex items-center gap-3">
+          {/* <div className="flex items-center gap-3">
             <input
               type="checkbox"
               id="terms"
@@ -109,7 +230,7 @@ export default function LoginPage() {
             >
               I agree to the Terms & Privacy
             </label>
-          </div>
+          </div> */}
 
           {/* Submit Button */}
           <button
