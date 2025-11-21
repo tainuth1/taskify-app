@@ -1,16 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useAppDispatch, useAppSelector } from "@/store";
+import {
+  forgetPasswordAsync,
+  clearError,
+  setResetEmail,
+} from "@/features/auth/authSlice";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
   });
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const { isLoading, error: authError } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+
+  // Clear error when component mounts
+  useEffect(() => {
+    dispatch(clearError());
+  }, [dispatch]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -18,19 +31,22 @@ export default function ForgotPasswordPage() {
       ...prev,
       [name]: value,
     }));
+    if (authError) dispatch(clearError());
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    dispatch(clearError());
+
     try {
-      setIsLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setFormData({ email: "" });
-      router.push("/verify");
+      const result = await dispatch(forgetPasswordAsync(formData.email));
+
+      if (forgetPasswordAsync.fulfilled.match(result)) {
+        dispatch(setResetEmail(formData.email));
+        router.push("/verify");
+      }
     } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
+      console.error("Forgot password error:", error);
     }
   };
 
@@ -48,6 +64,13 @@ export default function ForgotPasswordPage() {
 
         {/* Form */}
         <form className="space-y-5" onSubmit={handleSubmit}>
+          {/* Error Message */}
+          {authError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800">{authError}</p>
+            </div>
+          )}
+
           {/* Email Field */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -60,6 +83,7 @@ export default function ForgotPasswordPage() {
               value={formData.email}
               onChange={handleInputChange}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 transition"
+              required
             />
           </div>
 

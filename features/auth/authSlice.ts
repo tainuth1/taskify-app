@@ -20,6 +20,9 @@ import {
   SignInResponse,
   User,
   ApiError,
+  forgotPassword,
+  verifyOtp,
+  resetPassword,
 } from "@/services/authService";
 import { storage } from "@/lib/storage";
 
@@ -119,6 +122,47 @@ export const getCurrentUserAsync = createAsyncThunk<
   }
 });
 
+export const forgetPasswordAsync = createAsyncThunk<
+  string, // Return the success message
+  string,
+  { rejectValue: ApiError }
+>("authentication/forgetPassword", async (email, { rejectWithValue }) => {
+  try {
+    const response = await forgotPassword(email);
+    return response.message;
+  } catch (error) {
+    return rejectWithValue(error as ApiError);
+  }
+});
+
+export const verifyOtpAsync = createAsyncThunk<
+  string, // Return reset_token
+  { email: string; otp: string },
+  { rejectValue: ApiError }
+>("authentication/verifyOtp", async ({ email, otp }, { rejectWithValue }) => {
+  try {
+    const response = await verifyOtp(email, otp);
+    return response.data.reset_token;
+  } catch (error) {
+    return rejectWithValue(error as ApiError);
+  }
+});
+
+export const resetPasswordAsync = createAsyncThunk<
+  string, // Return success message
+  { resetToken: string; newPassword: string },
+  { rejectValue: ApiError }
+>(
+  "authentication/resetPassword",
+  async ({ resetToken, newPassword }, { rejectWithValue }) => {
+    try {
+      const response = await resetPassword(resetToken, newPassword);
+      return response.message;
+    } catch (error) {
+      return rejectWithValue(error as ApiError);
+    }
+  }
+);
 // ============================================================================
 // State Interface
 // ============================================================================
@@ -132,6 +176,8 @@ interface AuthState {
   isLoading: boolean;
   isVerifying: boolean; // True when verifying auth status on app load
   error: string | null;
+  resetEmail: string | null; // Email used for password reset flow
+  resetToken: string | null; // Reset token from OTP verification
 }
 
 // ============================================================================
@@ -148,12 +194,15 @@ interface AuthState {
  */
 const getInitialState = (): AuthState => {
   if (typeof window === "undefined") {
+    // check if server side
     return {
       user: null,
       isAuthenticated: false,
       isLoading: false,
       isVerifying: true, // Start as verifying on server
       error: null,
+      resetEmail: null,
+      resetToken: null,
     };
   }
 
@@ -169,6 +218,8 @@ const getInitialState = (): AuthState => {
         isLoading: false,
         isVerifying: true, // Will verify on mount
         error: null,
+        resetEmail: null,
+        resetToken: null,
       };
     } catch {
       // If parsing fails, clear invalid data
@@ -182,6 +233,8 @@ const getInitialState = (): AuthState => {
     isLoading: false,
     isVerifying: true, // Will verify on mount
     error: null,
+    resetEmail: null,
+    resetToken: null,
   };
 };
 
@@ -226,6 +279,21 @@ const authSlice = createSlice({
       if (typeof window !== "undefined") {
         storage.removeItem("user");
       }
+    },
+
+    /**
+     * Set reset email for password reset flow
+     */
+    setResetEmail: (state, action: PayloadAction<string>) => {
+      state.resetEmail = action.payload;
+    },
+
+    /**
+     * Clear reset email and token
+     */
+    clearResetData: (state) => {
+      state.resetEmail = null;
+      state.resetToken = null;
     },
   },
   extraReducers: (builder) => {
@@ -350,9 +418,57 @@ const authSlice = createSlice({
         if (typeof window !== "undefined") {
           storage.removeItem("user");
         }
+      })
+
+      // Forgot Password
+      .addCase(forgetPasswordAsync.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(forgetPasswordAsync.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+        // Success message is returned in action.payload, but we don't store it
+      })
+      .addCase(forgetPasswordAsync.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || "Failed to send OTP";
+      })
+
+      // Verify OTP
+      .addCase(verifyOtpAsync.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(verifyOtpAsync.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.resetToken = action.payload; // Store reset_token
+        state.error = null;
+      })
+      .addCase(verifyOtpAsync.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || "OTP verification failed";
+      })
+
+      // Reset Password
+      .addCase(resetPasswordAsync.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(resetPasswordAsync.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+        // Clear reset data after successful password reset
+        state.resetEmail = null;
+        state.resetToken = null;
+      })
+      .addCase(resetPasswordAsync.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || "Password reset failed";
       });
   },
 });
 
-export const { clearError, setAuth, clearAuth } = authSlice.actions;
+export const { clearError, setAuth, clearAuth, setResetEmail, clearResetData } =
+  authSlice.actions;
 export default authSlice.reducer;

@@ -83,6 +83,18 @@ export interface RefreshTokenResponse {
 }
 
 /**
+ * Verify OTP response data structure
+ */
+export interface VerifyOtpResponseData {
+  reset_token: string;
+}
+
+/**
+ * Verify OTP response structure
+ */
+export interface VerifyOtpResponse extends ApiResponse<VerifyOtpResponseData> {}
+
+/**
  * API error structure
  */
 export interface ApiError {
@@ -220,5 +232,55 @@ export const refreshToken = async (): Promise<RefreshTokenResponse> => {
 export const getCurrentUser = async (): Promise<ApiResponse<User>> => {
   return await apiClient<ApiResponse<User>>("/api/auth/me", {
     method: "GET",
+  });
+};
+
+/**
+ * Get OTP for change password vai email
+ *
+ * @param email
+ * @returns Message with null user data
+ */
+export const forgotPassword = async (email: string): Promise<ApiResponse> => {
+  return await apiClient<ApiResponse>("/api/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+};
+
+/**
+ * Verify OTP for change password
+ *
+ * @param email - Email address
+ * @param otp - OTP code
+ * @returns Response containing reset_token for password reset
+ */
+export const verifyOtp = async (
+  email: string,
+  otp: string
+): Promise<VerifyOtpResponse> => {
+  return await apiClient<VerifyOtpResponse>("/api/auth/verify-otp", {
+    method: "POST",
+    body: JSON.stringify({ email, otp }),
+  });
+};
+
+/**
+ * Reset password using reset token
+ *
+ * @param resetToken - Reset token from OTP verification
+ * @param newPassword - New password to set
+ * @returns Response confirming password reset
+ */
+export const resetPassword = async (
+  resetToken: string,
+  newPassword: string
+): Promise<ApiResponse> => {
+  return await apiClient<ApiResponse>("/api/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({
+      reset_token: resetToken,
+      new_password: newPassword,
+    }),
   });
 };
