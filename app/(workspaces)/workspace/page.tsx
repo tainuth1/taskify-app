@@ -1,114 +1,242 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useAppDispatch, useAppSelector } from "@/store";
-import { signOutAsync } from "@/features/auth/authSlice";
-import { LogOut, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import DueTaskCard from "@/components/ui/due-task-card";
+import { StatCard } from "@/components/ui/state-card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import TaskCard from "@/components/ui/task-card";
+import { TaskPerformanceChart } from "@/components/ui/task-performance-chart";
+import { WorkspaceSkeleton } from "@/components/ui/workspace-skeleton";
+import { apiClient } from "@/services/apiClient";
+import { useAppSelector } from "@/store";
+import { DashboardApiResponse, DashboardResponse } from "@/types/dahboard";
+import {
+  FilePlusCorner,
+  FileSearchCorner,
+  FolderPlus,
+  FolderSearch,
+  PlusCircle,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
-/**
- * Workspace Page
- *
- * Main workspace page for authenticated users.
- * Includes a signout button for testing logout functionality.
- */
 export default function Workspace() {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { user, isLoading } = useAppSelector((state) => state.auth);
+  const { user } = useAppSelector((state) => state.auth);
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState<Boolean>(false);
 
-  const handleSignOut = async () => {
-    try {
-      await dispatch(signOutAsync()).unwrap();
-      router.push("/login");
-    } catch (error) {
-      console.error("Signout failed:", error);
-      // Still redirect even if backend call fails
-      router.push("/login");
-    }
-  };
+  useEffect(() => {
+    const getDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        const response: DashboardApiResponse = await apiClient(
+          "/api/dashboard",
+          { method: "GET" }
+        );
+        setDashboardData(response.data);
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    getDashboardData();
+  }, [user]);
+
+  if (isLoading) {
+    return <WorkspaceSkeleton />;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Workspace</h1>
-            <p className="text-gray-600 mt-1">
-              Welcome back, {user?.username || user?.email || "User"}!
-            </p>
+    <div className="p-5">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome {user?.full_name || user?.username}
+          </h1>
+          <p className="text-sm text-gray-500">
+            This is your workspace. Here you can manage your projects and tasks.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant={"default"} className="cursor-pointer">
+            <FilePlusCorner className="w-4 h-4" />
+            New Task
+          </Button>
+          <Button variant={"default"} className="cursor-pointer">
+            <FolderPlus className="w-4 h-4" />
+            New Project
+          </Button>
+        </div>
+      </div>
+
+      {/* Main dashboard */}
+      <div className="grid grid-cols-4 gap-5 mt-5">
+        {/* left section */}
+        <div className="col-span-3 space-y-5">
+          {/* Overview */}
+          <div className="">
+            <h2 className="text-lg">Overviews</h2>
+            <div className="grid grid-cols-3 gap-5 mt-1">
+              {dashboardData?.stats.map((stat, index) => (
+                <StatCard
+                  key={index}
+                  title={stat.title}
+                  value={stat.value}
+                  bgColor={
+                    index === 0
+                      ? "purple"
+                      : index === 1
+                      ? "pink"
+                      : index === 2
+                      ? "green"
+                      : "yellow"
+                  }
+                  href={
+                    stat.title.toLowerCase().includes("project")
+                      ? "/projects"
+                      : "/tasks"
+                  }
+                />
+              ))}
+            </div>
           </div>
 
-          {/* Sign Out Button */}
-          <button
-            onClick={handleSignOut}
-            disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="animate-spin" size={18} />
-                <span>Signing out...</span>
-              </>
-            ) : (
-              <>
-                <LogOut size={18} />
-                <span>Sign Out</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* User Info Card */}
-        {user && (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              User Information
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-500">Email</p>
-                <p className="text-gray-900 font-medium">{user.email}</p>
+          {/* High priority tasks */}
+          <div className="">
+            <Tabs defaultValue="personal" className="w-full">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg">High Priority Tasks</h2>
+                <TabsList className="rounded-md">
+                  <TabsTrigger
+                    value="personal"
+                    className="rounded-sm cursor-pointer"
+                  >
+                    Personal
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="project"
+                    className="rounded-sm cursor-pointer"
+                  >
+                    Project
+                  </TabsTrigger>
+                </TabsList>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Username</p>
-                <p className="text-gray-900 font-medium">{user.username}</p>
-              </div>
-              {user.full_name && (
-                <div>
-                  <p className="text-sm text-gray-500">Full Name</p>
-                  <p className="text-gray-900 font-medium">{user.full_name}</p>
+              <TabsContent value="personal">
+                <div className="grid grid-cols-3 gap-5 mt-1">
+                  {dashboardData?.highPriorityTasks.personal.length &&
+                  dashboardData?.highPriorityTasks.personal.length > 0 ? (
+                    dashboardData?.highPriorityTasks.personal.map(
+                      (task, index) => <TaskCard key={index} task={task} />
+                    )
+                  ) : (
+                    <div className="col-span-3 flex flex-col items-center justify-center h-[262.5px]">
+                      <div className="flex flex-col items-center gap-4 text-center">
+                        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                          <FileSearchCorner className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            No high priority tasks yet
+                          </h3>
+                          <p className="text-sm text-gray-500 max-w-md">
+                            Get started by creating your first high priority
+                            task.
+                          </p>
+                        </div>
+                        <Button
+                          variant="default"
+                          className="mt-2 cursor-pointer"
+                        >
+                          <FilePlusCorner className="w-4 h-4" />
+                          Create Task
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-              <div>
-                <p className="text-sm text-gray-500">User ID</p>
-                <p className="text-gray-900 font-medium text-sm font-mono">
-                  {user.id}
-                </p>
-              </div>
-              {user.profile && (
-                <div className="md:col-span-2">
-                  <p className="text-sm text-gray-500 mb-2">Profile Picture</p>
-                  <img
-                    src={user.profile}
-                    alt="Profile"
-                    className="w-24 h-24 rounded-full object-cover"
-                  />
+              </TabsContent>
+              <TabsContent value="project">
+                <div className="grid grid-cols-3 gap-5 mt-1">
+                  {dashboardData?.highPriorityTasks.project.length &&
+                  dashboardData?.highPriorityTasks.project.length > 0 ? (
+                    dashboardData?.highPriorityTasks.project.map(
+                      (task, index) => <TaskCard key={index} task={task} />
+                    )
+                  ) : (
+                    <div className="col-span-3 flex flex-col items-center justify-center h-[262.5px]">
+                      <div className="flex flex-col items-center gap-4 text-center">
+                        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                          <FolderSearch className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            No high priority tasks in projects yet
+                          </h3>
+                          <p className="text-sm text-gray-500 max-w-md">
+                            Get started by creating your first high priority
+                            task in your projects.
+                          </p>
+                        </div>
+                        <Button
+                          variant="default"
+                          className="mt-2 cursor-pointer"
+                        >
+                          <FilePlusCorner className="w-4 h-4" />
+                          Create Task for a project
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Due soon tasks */}
+          <div className="">
+            <h1 className="text-lg">Due Soon</h1>
+            <div className="mt-1 flex flex-col gap-3">
+              {dashboardData?.dueSoon.length &&
+              dashboardData?.dueSoon.length > 0 ? (
+                dashboardData?.dueSoon.map((task, index) => (
+                  <DueTaskCard key={index} task={task} />
+                ))
+              ) : (
+                <div className="col-span-3 flex flex-col items-center justify-center h-[262.5px]">
+                  <p className="text-sm text-gray-500">
+                    No due soon tasks found
+                  </p>
                 </div>
               )}
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Main Content */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Your Workspace
-          </h2>
-          <p className="text-gray-600">
-            This is your protected workspace. You can only access this page when
-            authenticated.
-          </p>
+        {/* right section */}
+        <div className="col-span-1 space-y-5">
+          <div className="">
+            <h2 className="text-lg">Calendar</h2>
+            <div className="mt-1">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                className="w-full rounded-md border border-slate-200 bg-white"
+                captionLayout="dropdown"
+              />
+            </div>
+          </div>
+
+          <div className="">
+            <TaskPerformanceChart
+              taskPerformance={dashboardData?.taskPerformance}
+            />
+          </div>
         </div>
       </div>
     </div>

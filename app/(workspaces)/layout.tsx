@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { getCurrentUserAsync } from "@/features/auth/authSlice";
+import { Sidebar } from "@/components/layouts/sidebar";
 
 /**
  * Protected Layout for Workspaces
@@ -75,5 +76,10 @@ export default function WorkspacesLayout({
     return null;
   }
 
-  return <>{children}</>;
+  return (
+    <div className="flex h-screen">
+      <Sidebar />
+      <div className="flex-1 pl-72">{children}</div>
+    </div>
+  );
 }
