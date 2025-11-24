@@ -18,8 +18,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn, formatDueDate } from "@/lib/utils";
-import { ChevronUp } from "lucide-react";
-import { TaskResponse } from "@/types/dahboard";
+import { ChevronUp, Loader2 } from "lucide-react";
+import { TaskResponse, TaskStatus } from "@/types/dahboard";
+import { useAppDispatch } from "@/store";
+import { updateTaskStatusAsync } from "@/features/tasks/taskSlice";
 
 const typeColors = {
   Personal: "bg-blue-50 text-blue-600",
@@ -66,10 +68,35 @@ const TaskCard = ({ task }: { task: TaskResponse }) => {
     statuses.find((s) => s.value === task.status) || null
   );
 
+  const [isChangingStatus, setIsChangingStatus] =
+    React.useState<Boolean>(false);
+  const dispatch = useAppDispatch();
+
   // Update internal state if prop changes
   React.useEffect(() => {
     setSelectedStatus(statuses.find((s) => s.value === task.status) || null);
   }, [task.status]);
+
+  const handleUpdateStatus = async (status: TaskStatus) => {
+    try {
+      setIsChangingStatus(true);
+      const result = await dispatch(
+        updateTaskStatusAsync({ taskId: task.id, status })
+      );
+
+      if (updateTaskStatusAsync.fulfilled.match(result)) {
+        setSelectedStatus(statuses.find((s) => s.value === status) || null);
+      } else if (updateTaskStatusAsync.rejected.match(result)) {
+        setSelectedStatus(
+          statuses.find((s) => s.value === task.status) || null
+        );
+      }
+    } catch (error) {
+      setSelectedStatus(statuses.find((s) => s.value === task.status) || null);
+    } finally {
+      setIsChangingStatus(false);
+    }
+  };
 
   return (
     <div className="w-full relative p-4 rounded-md border border-slate-200 bg-white hover:border-slate-200 transition-all">
@@ -97,12 +124,12 @@ const TaskCard = ({ task }: { task: TaskResponse }) => {
         </Avatar>
       </div>
       <Link
-        href="#"
-        className="text-slate-800 font-semibold hover:text-slate-600 transition-colors"
+        href={`/tasks/${task.id}`}
+        className="text-slate-800 font-semibold hover:text-slate-600 transition-colors line-clamp-1"
       >
         {task.title}
       </Link>
-      <p className="text-slate-500 text-[13px] mt-2 line-clamp-2">
+      <p className="text-slate-500 text-[13px] mt-2 line-clamp-1">
         {task.description}
       </p>
       {/* progress */}
@@ -185,14 +212,18 @@ const TaskCard = ({ task }: { task: TaskResponse }) => {
                   role="combobox"
                   aria-expanded={open}
                   className={cn(
-                    "h-6 justify-between px-3 py-0.5 text-[11px] font-medium border rounded-md hover:bg-opacity-80 transition-colors",
+                    "h-6 justify-between px-3 py-0.5 text-[11px] font-medium border rounded-sm hover:bg-opacity-80 transition-colors",
                     selectedStatus
                       ? selectedStatus.className
                       : "bg-gray-50 text-gray-500 border-gray-200"
                   )}
                 >
                   {selectedStatus ? selectedStatus.label : "Set status"}{" "}
-                  <ChevronUp />
+                  {!isChangingStatus ? (
+                    <ChevronUp />
+                  ) : (
+                    <Loader2 className="animate-spin" />
+                  )}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="p-0 w-[150px]" side="top" align="end">
@@ -209,9 +240,8 @@ const TaskCard = ({ task }: { task: TaskResponse }) => {
                           key={statusItem.value}
                           value={statusItem.value}
                           onSelect={(value) => {
-                            setSelectedStatus(
-                              statuses.find((s) => s.value === value) || null
-                            );
+                            const selectedStatusValue = value as TaskStatus;
+                            handleUpdateStatus(selectedStatusValue);
                             setOpen(false);
                           }}
                           className="text-xs"

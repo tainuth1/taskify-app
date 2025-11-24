@@ -9,7 +9,7 @@ import TaskCard from "@/components/ui/task-card";
 import { TaskPerformanceChart } from "@/components/ui/task-performance-chart";
 import { WorkspaceSkeleton } from "@/components/ui/workspace-skeleton";
 import { apiClient } from "@/services/apiClient";
-import { useAppSelector } from "@/store";
+import { RootState, useAppSelector } from "@/store";
 import { DashboardApiResponse, DashboardResponse } from "@/types/dahboard";
 import {
   FilePlusCorner,
@@ -21,7 +21,7 @@ import {
 import { useEffect, useState } from "react";
 
 export default function Workspace() {
-  const { user } = useAppSelector((state) => state.auth);
+  const { user } = useAppSelector((state: RootState) => state.auth);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(
     null

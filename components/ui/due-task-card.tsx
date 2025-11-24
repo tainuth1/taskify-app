@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
 import { cn, formatDueDate } from "@/lib/utils";
@@ -37,7 +36,7 @@ const DueTaskCard = ({ task }: { task: TaskResponse }) => {
           {task.project_id ? "Project" : "Personal"}
         </span>
         <Link
-          href="#"
+          href={`/tasks/${task.id}`}
           className="text-slate-800 text-sm font-semibold hover:text-slate-600 transition-colors truncate"
         >
           {task.title}
