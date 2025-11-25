@@ -69,3 +69,25 @@ export const getTasks = async (): Promise<ApiResponse<TaskResponse[]>> => {
     method: "GET",
   });
 };
+
+/**
+ * Delete a task
+ *
+ * @param taskId - The ID of the task to delete
+ * @returns Success response
+ *
+ * @example
+ * ```typescript
+ * const result = await deleteTask("123");
+ * ```
+ */
+export const deleteTask = async (
+  taskId: string
+): Promise<ApiResponse<{ message: string }>> => {
+  return await apiClient<ApiResponse<{ message: string }>>(
+    `/api/tasks/${taskId}`,
+    {
+      method: "DELETE",
+    }
+  );
+};

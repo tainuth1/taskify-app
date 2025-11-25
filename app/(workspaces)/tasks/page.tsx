@@ -6,12 +6,12 @@ import { getTasksAsync } from "@/features/tasks/taskSlice";
 import { useAppDispatch, useAppSelector } from "@/store";
 import React, { useEffect, useMemo, useCallback } from "react";
 import { TaskResponse, TaskStatus } from "@/types/dahboard";
+import { ChartLine, FilePlusCorner, PlusCircle } from "lucide-react";
 
 const Tasks = () => {
   const dispatch = useAppDispatch();
   const { tasks, isLoading, error } = useAppSelector((state) => state.task);
 
-  // Fetch tasks on component mount
   useEffect(() => {
     const fetchTasks = async () => {
       await dispatch(getTasksAsync());
@@ -42,9 +42,6 @@ const Tasks = () => {
     [tasks]
   );
 
-  // Memoize filtered tasks to avoid recalculating on every render
-  // This improves performance when tasks array is large
-  // Each container will only show tasks with the matching status
   const pendingTasks = useMemo(
     () => filterTasksByStatus(TaskStatus.PENDING),
     [filterTasksByStatus]
@@ -75,7 +72,14 @@ const Tasks = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* some stuff will put in this section later */}
+          <Button variant={"default"} className="cursor-pointer">
+            <FilePlusCorner className="w-4 h-4" />
+            New Task
+          </Button>
+          <Button variant={"outline"} className="cursor-pointer text-gray-600 hover:bg-slate-100 active:bg-slate-200">
+            <ChartLine className="w-4 h-4" />
+            Insights
+          </Button>
         </div>
       </div>
 
@@ -85,10 +89,16 @@ const Tasks = () => {
         <div className="lg:col-span-3 md:col-span-4 sm:col-span-6 col-span-12 ">
           <TasksContainer
             title={"PENDING"}
-            lineColor="bg-[#212D36]"
+            lineColor="bg-blue-600"
             tasks={pendingTasks}
           >
-            <Button variant={"default"}>Add Task</Button>
+            <Button
+              variant={"outline"}
+              className="w-full border-dashed font-light cursor-pointer text-gray-700 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Add Task
+            </Button>
           </TasksContainer>
         </div>
 
@@ -96,27 +106,51 @@ const Tasks = () => {
         <div className="lg:col-span-3 md:col-span-4 sm:col-span-6 col-span-12 ">
           <TasksContainer
             title={"IN PROGRESS"}
-            lineColor="bg-[#4A6BBB]"
+            lineColor="bg-amber-500"
             tasks={inProgressTasks}
-          />
+          >
+            <Button
+              variant={"outline"}
+              className="w-full border-dashed font-light cursor-pointer text-gray-700 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Add Task
+            </Button>
+          </TasksContainer>
         </div>
 
         {/* STUCK Tasks Container */}
         <div className="lg:col-span-3 md:col-span-4 sm:col-span-6 col-span-12 ">
           <TasksContainer
             title={"STUCK"}
-            lineColor="bg-[#E5BF9E]"
+            lineColor="bg-red-500"
             tasks={stuckTasks}
-          />
+          >
+            <Button
+              variant={"outline"}
+              className="w-full border-dashed font-light cursor-pointer text-gray-700 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Add Task
+            </Button>
+          </TasksContainer>
         </div>
 
         {/* DONE Tasks Container */}
         <div className="lg:col-span-3 md:col-span-4 sm:col-span-6 col-span-12 ">
           <TasksContainer
             title={"DONE"}
-            lineColor="bg-[#8AB476]"
+            lineColor="bg-green-500"
             tasks={doneTasks}
-          />
+          >
+            <Button
+              variant={"outline"}
+              className="w-full border-dashed font-light cursor-pointer text-gray-700 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Add Task
+            </Button>
+          </TasksContainer>
         </div>
       </div>
     </div>

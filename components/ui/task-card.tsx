@@ -18,10 +18,23 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn, formatDueDate } from "@/lib/utils";
-import { ChevronUp, Loader2 } from "lucide-react";
+import {
+  ChevronUp,
+  List,
+  Loader2,
+  SquarePen,
+  Trash,
+  Trash2,
+} from "lucide-react";
 import { TaskResponse, TaskStatus } from "@/types/dahboard";
 import { useAppDispatch } from "@/store";
-import { updateTaskStatusAsync } from "@/features/tasks/taskSlice";
+import {
+  updateTaskStatusAsync,
+  deleteTaskAsync,
+} from "@/features/tasks/taskSlice";
+import { usePathname } from "next/navigation";
+import { DeleteConfirmationModal } from "./delete-confirmation-modal";
+import { toast } from "@/lib/toast";
 
 const typeColors = {
   Personal: "bg-blue-50 text-blue-600",
@@ -67,6 +80,10 @@ const TaskCard = ({ task }: { task: TaskResponse }) => {
   const [selectedStatus, setSelectedStatus] = React.useState<Status | null>(
     statuses.find((s) => s.value === task.status) || null
   );
+  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  const pathname = usePathname();
 
   const [isChangingStatus, setIsChangingStatus] =
     React.useState<Boolean>(false);
@@ -86,20 +103,49 @@ const TaskCard = ({ task }: { task: TaskResponse }) => {
 
       if (updateTaskStatusAsync.fulfilled.match(result)) {
         setSelectedStatus(statuses.find((s) => s.value === status) || null);
+        toast.success("Task status updated successfully");
       } else if (updateTaskStatusAsync.rejected.match(result)) {
         setSelectedStatus(
           statuses.find((s) => s.value === task.status) || null
         );
+        const errorMessage =
+          result.error?.message || "Failed to update task status";
+        toast.error(errorMessage);
       }
     } catch (error) {
       setSelectedStatus(statuses.find((s) => s.value === task.status) || null);
+      toast.error("An unexpected error occurred");
     } finally {
       setIsChangingStatus(false);
     }
   };
 
+  const handleDeleteTask = async () => {
+    try {
+      setIsDeleting(true);
+      const result = await dispatch(deleteTaskAsync(task.id));
+
+      if (deleteTaskAsync.fulfilled.match(result)) {
+        setDeleteModalOpen(false);
+        toast.success("Task deleted successfully");
+      } else if (deleteTaskAsync.rejected.match(result)) {
+        // Error handling - modal will stay open so user can retry
+        const errorMessage =
+          result.error?.message || "Failed to delete task. Please try again.";
+        toast.error(errorMessage);
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred while deleting the task");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
-    <div className="w-full relative p-4 rounded-md border border-slate-200 bg-white hover:border-slate-200 transition-all">
+    <div
+      draggable
+      className="w-full relative p-4 rounded-md border border-slate-200 bg-white hover:border-slate-200 transition-all"
+    >
       <div className="flex justify-between items-center mb-3">
         <span
           className={`px-3 py-1 text-xs font-medium ${
@@ -109,19 +155,48 @@ const TaskCard = ({ task }: { task: TaskResponse }) => {
         >
           {task.project_id ? "Project" : "Personal"}
         </span>
-        <Avatar className="size-6 rounded-full">
-          <AvatarImage
-            className="size-6 rounded-full"
-            src={task.created_by_user.profile || ""}
-            alt={
-              task.created_by_user.full_name || task.created_by_user.username
-            }
-          />
-          <AvatarFallback className="size-6 rounded-full">
-            {task.created_by_user.full_name?.charAt(0) ||
-              task.created_by_user.username.charAt(0)}
-          </AvatarFallback>
-        </Avatar>
+        <div className="flex items-center gap-2">
+          <Avatar className="size-6 rounded-full">
+            <AvatarImage
+              className="size-6 rounded-full"
+              src={task.created_by_user.profile || ""}
+              alt={
+                task.created_by_user.full_name || task.created_by_user.username
+              }
+            />
+            <AvatarFallback className="size-6 rounded-full">
+              {task.created_by_user.full_name?.charAt(0) ||
+                task.created_by_user.username.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          {pathname !== "/workspace" && (
+            <div className="flex items-center gap-1">
+              <Button
+                size={"icon-sm"}
+                variant={"ghost"}
+                title="edit task"
+                className="group bg-blue-50 rounded-sm cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+              >
+                <SquarePen
+                  className="size-4 text-blue-400 group-hover:text-blue-500"
+                  strokeWidth={2}
+                />
+              </Button>
+              <Button
+                size={"icon-sm"}
+                variant={"ghost"}
+                title="delete task"
+                onClick={() => setDeleteModalOpen(true)}
+                className="group bg-red-50 rounded-sm cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+              >
+                <Trash2
+                  className="size-4 text-red-400 group-hover:text-red-500"
+                  strokeWidth={2}
+                />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
       <Link
         href={`/tasks/${task.id}`}
@@ -257,6 +332,14 @@ const TaskCard = ({ task }: { task: TaskResponse }) => {
           </div>
         </div>
       </div>
+
+      <DeleteConfirmationModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        onConfirm={handleDeleteTask}
+        taskTitle={task.title}
+        isLoading={isDeleting}
+      />
     </div>
   );
 };

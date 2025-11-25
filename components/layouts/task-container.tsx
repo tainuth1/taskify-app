@@ -21,7 +21,7 @@ const TasksContainer = ({
         <div className="">
           <h2 className="text-regular font-semibold flex items-center gap-3">
             {title.toUpperCase()}
-            <span className="text-sm font-normal text-second px-3 border-2 border-gray-300 rounded-full">
+            <span className="text-sm font-normal text-second px-3 border text-gray-800 border-gray-300 rounded-full">
               {tasks.length}
             </span>
           </h2>
@@ -29,9 +29,14 @@ const TasksContainer = ({
         <div className={`w-full h-1 ${lineColor} rounded-full mt-3`}></div>
       </div>
       {/* Tasks Container */}
-      <div className="w-full flex flex-col gap-3 max-h-[82.2vh] sub-task-list overflow-y-auto mt-3 hide-scroolbar">
-        {tasks.length > 0 &&
-          tasks.map((task) => <TaskCard key={task.id} task={task} />)}
+      <div className="w-full flex flex-col gap-3 max-h-[82vh] sub-task-list overflow-y-auto mt-3 hide-scrollbar">
+        {tasks.length > 0 ? (
+          tasks.map((task) => <TaskCard key={task.id} task={task} />)
+        ) : (
+          <div className="flex justify-center items-center h-full">
+            <p className="text-sm text-gray-500">No tasks found</p>
+          </div>
+        )}
         {children}
       </div>
     </div>

@@ -10,7 +10,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { ApiError } from "@/services/authService";
 import { TaskResponse, TaskStatus } from "@/types/dahboard";
-import { getTasks, updateTaskStatus } from "@/services/taskService";
+import { getTasks, updateTaskStatus, deleteTask } from "@/services/taskService";
 
 // ============================================================================
 // Async Thunks
@@ -83,6 +83,30 @@ export const getTasksAsync = createAsyncThunk<
   }
 });
 
+/**
+ * Delete a task
+ *
+ * @param taskId - The ID of the task to delete
+ * @returns The deleted task ID
+ *
+ * @example
+ * ```typescript
+ * const result = await deleteTaskAsync("123");
+ * ```
+ */
+export const deleteTaskAsync = createAsyncThunk<
+  string,
+  string,
+  { rejectValue: ApiError }
+>("tasks/deleteTask", async (taskId, { rejectWithValue }) => {
+  try {
+    await deleteTask(taskId);
+    return taskId;
+  } catch (error) {
+    return rejectWithValue(error as ApiError);
+  }
+});
+
 const taskSlice = createSlice({
   name: "tasks",
   initialState,
@@ -131,6 +155,22 @@ const taskSlice = createSlice({
     builder.addCase(updateTaskStatusAsync.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload?.message || "Failed to update task status";
+    });
+
+    // delete task
+    builder.addCase(deleteTaskAsync.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(deleteTaskAsync.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.error = null;
+      // Remove the task from the local state
+      state.tasks = state.tasks.filter((task) => task.id !== action.payload);
+    });
+    builder.addCase(deleteTaskAsync.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload?.message || "Failed to delete task";
     });
   },
 });
