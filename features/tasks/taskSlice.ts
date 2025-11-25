@@ -10,7 +10,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { ApiError } from "@/services/authService";
 import { TaskResponse, TaskStatus } from "@/types/dahboard";
-import { updateTaskStatus } from "@/services/taskService";
+import { getTasks, updateTaskStatus } from "@/services/taskService";
 
 // ============================================================================
 // Async Thunks
@@ -26,6 +26,7 @@ import { updateTaskStatus } from "@/services/taskService";
  * Task state structure
  */
 interface TaskState {
+  tasks: TaskResponse[];
   isLoading: boolean;
   error: string | null;
 }
@@ -35,6 +36,7 @@ interface TaskState {
 // ============================================================================
 
 const initialState: TaskState = {
+  tasks: [],
   isLoading: false,
   error: null,
 };
@@ -68,6 +70,19 @@ export const updateTaskStatusAsync = createAsyncThunk<
   }
 });
 
+export const getTasksAsync = createAsyncThunk<
+  TaskResponse[],
+  void,
+  { rejectValue: ApiError }
+>("tasks/getTasks", async (_, { rejectWithValue }) => {
+  try {
+    const response = await getTasks();
+    return response.data;
+  } catch (error) {
+    return rejectWithValue(error as ApiError);
+  }
+});
+
 const taskSlice = createSlice({
   name: "tasks",
   initialState,
@@ -80,6 +95,20 @@ const taskSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
+    // get tasks
+    builder.addCase(getTasksAsync.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(getTasksAsync.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.tasks = action.payload;
+    });
+    builder.addCase(getTasksAsync.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload?.message || "Failed to get tasks";
+    });
+
     // update task status
     builder.addCase(updateTaskStatusAsync.pending, (state) => {
       state.isLoading = true;
@@ -88,6 +117,16 @@ const taskSlice = createSlice({
     builder.addCase(updateTaskStatusAsync.fulfilled, (state, action) => {
       state.isLoading = false;
       state.error = null;
+      // Update the task in the local state with the new status
+      // This ensures the task moves to the correct container immediately
+      const updatedTask = action.payload;
+      const taskIndex = state.tasks.findIndex(
+        (task) => task.id === updatedTask.id
+      );
+      if (taskIndex !== -1) {
+        // Replace the task with the updated version from the server
+        state.tasks[taskIndex] = updatedTask;
+      }
     });
     builder.addCase(updateTaskStatusAsync.rejected, (state, action) => {
       state.isLoading = false;

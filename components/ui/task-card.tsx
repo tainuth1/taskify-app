@@ -261,4 +261,4 @@ const TaskCard = ({ task }: { task: TaskResponse }) => {
   );
 };
 
-export default TaskCard;
+export default React.memo(TaskCard);

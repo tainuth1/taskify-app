@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
 import { cn, formatDueDate } from "@/lib/utils";
 import { TaskResponse } from "@/types/dahboard";
+import { memo } from "react";
 
 const typeColors = {
   Personal: "bg-blue-50 text-blue-600",
@@ -96,4 +97,4 @@ const DueTaskCard = ({ task }: { task: TaskResponse }) => {
   );
 };
 
-export default DueTaskCard;
+export default memo(DueTaskCard);

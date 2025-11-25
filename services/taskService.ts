@@ -53,3 +53,19 @@ export const updateTaskStatus = async (
     }
   );
 };
+
+/**
+ * Get all your personal tasks
+ *
+ * @returns All your personal tasks (task with project_id is null)
+ *
+ * @example
+ * ```typescript
+ * const tasks = await getTasks();
+ * ```
+ */
+export const getTasks = async (): Promise<ApiResponse<TaskResponse[]>> => {
+  return await apiClient<ApiResponse<TaskResponse[]>>("/api/tasks", {
+    method: "GET",
+  });
+};

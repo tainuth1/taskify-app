@@ -131,3 +131,8 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+.hide-scroolbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}

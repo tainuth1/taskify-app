@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ChevronLeft,
   ListTodo,
@@ -20,65 +20,103 @@ import { usePathname } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { signOutAsync } from "@/features/auth/authSlice";
 import Image from "next/image";
+import { apiClient, ApiResponse } from "@/services/apiClient";
+import { SidebarApiResponse, SidebarDataResponse } from "@/types/sidebar";
 
-const menuItems = [
-  {
-    id: "genderal",
-    label: "General",
-    items: [
-      {
-        id: "workspace",
-        name: "Dashboard",
-        icon: LayoutDashboard,
-        href: "/workspace",
-      },
-      {
-        id: "my-tasks",
-        name: "My Tasks",
-        icon: ListTodo,
-        badge: 5,
-        href: "/tasks",
-      },
-      {
-        id: "invite",
-        name: "Invitations",
-        icon: Users,
-        badge: 3,
-        href: "/invitations",
-      },
-    ],
+const sidebarDataInitailize: SidebarDataResponse = {
+  general: {
+    tasks: 0,
+    invitations: 0,
   },
-  {
-    id: "projects",
-    label: "Projects",
-    items: [
-      { id: "calendar", name: "Calendar", icon: Calendar, href: "/calendar" },
-      { id: "projects", name: "Projects", icon: Network, badge: 7, href: "/projects" },
-    ],
+  projects: {
+    projects: 0,
   },
-  {
-    id: "profile",
-    label: "Profile",
-    items: [
-      {
-        id: "notifications",
-        name: "Notifications",
-        icon: Bell,
-        badge: 10,
-        href: "/notifications",
-      },
-      { id: "settings", name: "Settings", icon: Settings, href: "/settings" },
-      { id: "log-out", name: "Log out", icon: LogOut, href: null },
-    ],
+  settings: {
+    notification: 0,
   },
-];
+};
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
+  const [sidebarData, setSidebarData] = useState<SidebarDataResponse | null>(
+    sidebarDataInitailize
+  );
   const pathname = usePathname();
 
   const dispatch = useAppDispatch();
   const { user, isLoading } = useAppSelector((state) => state.auth);
+
+  const menuItems = [
+    {
+      id: "genderal",
+      label: "General",
+      items: [
+        {
+          id: "workspace",
+          name: "Dashboard",
+          icon: LayoutDashboard,
+          href: "/workspace",
+        },
+        {
+          id: "my-tasks",
+          name: "My Tasks",
+          icon: ListTodo,
+          badge: sidebarData?.general.tasks,
+          href: "/tasks",
+        },
+        {
+          id: "invite",
+          name: "Invitations",
+          icon: Users,
+          badge: sidebarData?.general.invitations,
+          href: "/invitations",
+        },
+      ],
+    },
+    {
+      id: "projects",
+      label: "Projects",
+      items: [
+        { id: "calendar", name: "Calendar", icon: Calendar, href: "/calendar" },
+        {
+          id: "projects",
+          name: "Projects",
+          icon: Network,
+          badge: sidebarData?.projects.projects,
+          href: "/projects",
+        },
+      ],
+    },
+    {
+      id: "profile",
+      label: "Profile",
+      items: [
+        {
+          id: "notifications",
+          name: "Notifications",
+          icon: Bell,
+          badge: sidebarData?.settings.notification,
+          href: "/notifications",
+        },
+        { id: "settings", name: "Settings", icon: Settings, href: "/settings" },
+        { id: "log-out", name: "Log out", icon: LogOut, href: null },
+      ],
+    },
+  ];
+
+  useEffect(() => {
+    const getSidebarData = async () => {
+      try {
+        const response: SidebarApiResponse = await apiClient("/api/sidebar", {
+          method: "GET",
+        });
+        setSidebarData(response.data);
+      } catch (error) {
+        setSidebarData(sidebarDataInitailize);
+      }
+    };
+    getSidebarData();
+  }, []);
 
   return (
     <>
@@ -141,7 +179,7 @@ export function Sidebar() {
                           >
                             {submenu.name}
                           </span>
-                          {submenu.badge && (
+                          {submenu.badge != null && (
                             <span
                               className={`text-xs px-2 py-1 rounded ${
                                 isActive
@@ -149,7 +187,7 @@ export function Sidebar() {
                                   : "bg-green-100 text-green-700"
                               }`}
                             >
-                              {submenu.badge}
+                              {submenu.badge as number}
                             </span>
                           )}
                         </Link>
@@ -165,9 +203,9 @@ export function Sidebar() {
                           <span className="text-gray-600 font-medium flex-1 text-sm">
                             {submenu.name}
                           </span>
-                          {submenu.badge && (
+                          {submenu.badge != null && (
                             <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                              {submenu.badge}
+                              {submenu.badge as number}
                             </span>
                           )}
                         </div>
