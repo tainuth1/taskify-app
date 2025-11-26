@@ -10,7 +10,13 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { ApiError } from "@/services/authService";
 import { TaskResponse, TaskStatus } from "@/types/dahboard";
-import { getTasks, updateTaskStatus, deleteTask } from "@/services/taskService";
+import {
+  getTasks,
+  updateTaskStatus,
+  deleteTask,
+  createTask,
+  updateTask,
+} from "@/services/taskService";
 
 // ============================================================================
 // Async Thunks
@@ -70,6 +76,44 @@ export const updateTaskStatusAsync = createAsyncThunk<
   }
 });
 
+/**
+ * Create a task (personal by default, supports project via projectId)
+ *
+ * Note: For personal tasks, do not pass projectId. For project tasks, pass projectId.
+ */
+export const createTaskAsync = createAsyncThunk<
+  TaskResponse,
+  {
+    title: string;
+    description?: string;
+    priority: string;
+    status: TaskStatus | string;
+    due_date?: string | null;
+    projectId?: string;
+  },
+  { rejectValue: ApiError }
+>(
+  "tasks/createTask",
+  async (
+    { title, description, priority, status, due_date, projectId },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await createTask({
+        title,
+        description,
+        priority,
+        status,
+        due_date,
+        project_id: projectId,
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error as ApiError);
+    }
+  }
+);
+
 export const getTasksAsync = createAsyncThunk<
   TaskResponse[],
   void,
@@ -82,6 +126,57 @@ export const getTasksAsync = createAsyncThunk<
     return rejectWithValue(error as ApiError);
   }
 });
+
+/**
+ * Update a task
+ *
+ * @param payload - Task update payload with taskId
+ * @returns The updated task
+ *
+ * @example
+ * ```typescript
+ * const task = await updateTaskAsync({
+ *   taskId: "123",
+ *   title: "Updated title",
+ *   description: "Updated description",
+ *   priority: "high",
+ *   status: "in_progress",
+ *   due_date: "2025-12-01",
+ * });
+ * ```
+ */
+export const updateTaskAsync = createAsyncThunk<
+  TaskResponse,
+  {
+    taskId: string;
+    title: string;
+    description?: string;
+    priority: string;
+    status: TaskStatus | string;
+    due_date?: string | null;
+  },
+  { rejectValue: ApiError }
+>(
+  "tasks/updateTask",
+  async (
+    { taskId, title, description, priority, status, due_date },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await updateTask(taskId, {
+        id: taskId,
+        title,
+        description,
+        priority,
+        status,
+        due_date,
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error as ApiError);
+    }
+  }
+);
 
 /**
  * Delete a task
@@ -119,6 +214,22 @@ const taskSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
+    // create task
+    builder.addCase(createTaskAsync.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(createTaskAsync.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.error = null;
+      // Add the created task to the local list without refetching
+      state.tasks.push(action.payload);
+    });
+    builder.addCase(createTaskAsync.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload?.message || "Failed to create task";
+    });
+
     // get tasks
     builder.addCase(getTasksAsync.pending, (state) => {
       state.isLoading = true;
@@ -155,6 +266,28 @@ const taskSlice = createSlice({
     builder.addCase(updateTaskStatusAsync.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload?.message || "Failed to update task status";
+    });
+
+    // update task
+    builder.addCase(updateTaskAsync.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(updateTaskAsync.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.error = null;
+      // Replace the task in the local state with the updated version from the server
+      const updatedTask = action.payload;
+      const taskIndex = state.tasks.findIndex(
+        (task) => task.id === updatedTask.id
+      );
+      if (taskIndex !== -1) {
+        state.tasks[taskIndex] = updatedTask;
+      }
+    });
+    builder.addCase(updateTaskAsync.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload?.message || "Failed to update task";
     });
 
     // delete task

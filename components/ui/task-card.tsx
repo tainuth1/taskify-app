@@ -70,7 +70,13 @@ const statuses: Status[] = [
   },
 ];
 
-const TaskCard = ({ task }: { task: TaskResponse }) => {
+const TaskCard = ({
+  task,
+  onEdit,
+}: {
+  task: TaskResponse;
+  onEdit?: (task: TaskResponse) => void;
+}) => {
   const progressPercentage =
     task.subtask.total > 0 ? (task.subtask.done / task.subtask.total) * 100 : 0;
   const isCompleted =
@@ -175,6 +181,7 @@ const TaskCard = ({ task }: { task: TaskResponse }) => {
                 size={"icon-sm"}
                 variant={"ghost"}
                 title="edit task"
+                onClick={() => onEdit?.(task)}
                 className="group bg-blue-50 rounded-sm cursor-pointer hover:bg-gray-100 active:bg-gray-200"
               >
                 <SquarePen

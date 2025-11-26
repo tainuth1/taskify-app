@@ -7,6 +7,7 @@ type TasksContainerProps = {
   lineColor: string;
   tasks: TaskResponse[];
   children?: ReactNode;
+  onEditTask?: (task: TaskResponse) => void;
 };
 
 const TasksContainer = ({
@@ -14,6 +15,7 @@ const TasksContainer = ({
   lineColor,
   tasks,
   children,
+  onEditTask,
 }: TasksContainerProps) => {
   return (
     <div className="w-full active:cursor-grab cursor-pointer">
@@ -31,7 +33,9 @@ const TasksContainer = ({
       {/* Tasks Container */}
       <div className="w-full flex flex-col gap-3 max-h-[82vh] sub-task-list overflow-y-auto mt-3 hide-scrollbar">
         {tasks.length > 0 ? (
-          tasks.map((task) => <TaskCard key={task.id} task={task} />)
+          tasks.map((task) => (
+            <TaskCard key={task.id} task={task} onEdit={onEditTask} />
+          ))
         ) : (
           <div className="flex justify-center items-center h-full">
             <p className="text-sm text-gray-500">No tasks found</p>

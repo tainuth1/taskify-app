@@ -2,15 +2,25 @@
 
 import TasksContainer from "@/components/layouts/task-container";
 import { Button } from "@/components/ui/button";
-import { getTasksAsync } from "@/features/tasks/taskSlice";
+import {
+  getTasksAsync,
+  createTaskAsync,
+  updateTaskAsync,
+} from "@/features/tasks/taskSlice";
 import { useAppDispatch, useAppSelector } from "@/store";
-import React, { useEffect, useMemo, useCallback } from "react";
+import React, { useEffect, useMemo, useCallback, useState } from "react";
 import { TaskResponse, TaskStatus } from "@/types/dahboard";
 import { ChartLine, FilePlusCorner, PlusCircle } from "lucide-react";
+import { TaskForm } from "@/components/forms/task-form";
+import { toast } from "@/lib/toast";
 
 const Tasks = () => {
   const dispatch = useAppDispatch();
   const { tasks, isLoading, error } = useAppSelector((state) => state.task);
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskResponse | null>(null);
+  const [initialStatus, setInitialStatus] = useState<TaskStatus | undefined>();
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -18,6 +28,61 @@ const Tasks = () => {
     };
     fetchTasks();
   }, [dispatch]);
+
+  const openAdd = (status?: TaskStatus) => {
+    setEditingTask(null);
+    setInitialStatus(status);
+    setIsFormOpen(true);
+  };
+
+  const openEdit = (task: TaskResponse) => {
+    setEditingTask(task);
+    setInitialStatus(undefined);
+    setIsFormOpen(true);
+  };
+
+  const handleFormSubmit = async (data: {
+    title: string;
+    description?: string;
+    priority: string;
+    status: TaskStatus | string;
+    due_date?: string | null;
+  }) => {
+    if (editingTask) {
+      // Update existing task
+      await dispatch(
+        updateTaskAsync({
+          taskId: editingTask.id,
+          title: data.title,
+          description: data.description,
+          priority: data.priority,
+          status: data.status,
+          due_date: data.due_date,
+        })
+      ).unwrap();
+      toast.success("Task updated successfully");
+    } else {
+      // Create new task
+      await dispatch(
+        createTaskAsync({
+          title: data.title,
+          description: data.description,
+          priority: data.priority,
+          status: data.status,
+          due_date: data.due_date,
+        })
+      ).unwrap();
+      toast.success("Create task successfully");
+    }
+  };
+
+  const handleFormClose = (open: boolean) => {
+    setIsFormOpen(open);
+    if (!open) {
+      setEditingTask(null);
+      setInitialStatus(undefined);
+    }
+  };
 
   /**
    * Filter tasks by status
@@ -72,11 +137,18 @@ const Tasks = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant={"default"} className="cursor-pointer">
+          <Button
+            variant={"default"}
+            className="cursor-pointer"
+            onClick={() => openAdd()}
+          >
             <FilePlusCorner className="w-4 h-4" />
             New Task
           </Button>
-          <Button variant={"outline"} className="cursor-pointer text-gray-600 hover:bg-slate-100 active:bg-slate-200">
+          <Button
+            variant={"outline"}
+            className="cursor-pointer text-gray-600 hover:bg-slate-100 active:bg-slate-200"
+          >
             <ChartLine className="w-4 h-4" />
             Insights
           </Button>
@@ -91,10 +163,12 @@ const Tasks = () => {
             title={"PENDING"}
             lineColor="bg-blue-600"
             tasks={pendingTasks}
+            onEditTask={openEdit}
           >
             <Button
               variant={"outline"}
               className="w-full border-dashed font-light cursor-pointer text-gray-700 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100"
+              onClick={() => openAdd(TaskStatus.PENDING)}
             >
               <PlusCircle className="w-4 h-4" />
               Add Task
@@ -108,10 +182,12 @@ const Tasks = () => {
             title={"IN PROGRESS"}
             lineColor="bg-amber-500"
             tasks={inProgressTasks}
+            onEditTask={openEdit}
           >
             <Button
               variant={"outline"}
               className="w-full border-dashed font-light cursor-pointer text-gray-700 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100"
+              onClick={() => openAdd(TaskStatus.IN_PROGRESS)}
             >
               <PlusCircle className="w-4 h-4" />
               Add Task
@@ -125,10 +201,12 @@ const Tasks = () => {
             title={"STUCK"}
             lineColor="bg-red-500"
             tasks={stuckTasks}
+            onEditTask={openEdit}
           >
             <Button
               variant={"outline"}
               className="w-full border-dashed font-light cursor-pointer text-gray-700 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100"
+              onClick={() => openAdd(TaskStatus.STUCK)}
             >
               <PlusCircle className="w-4 h-4" />
               Add Task
@@ -142,10 +220,12 @@ const Tasks = () => {
             title={"DONE"}
             lineColor="bg-green-500"
             tasks={doneTasks}
+            onEditTask={openEdit}
           >
             <Button
               variant={"outline"}
               className="w-full border-dashed font-light cursor-pointer text-gray-700 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100"
+              onClick={() => openAdd(TaskStatus.DONE)}
             >
               <PlusCircle className="w-4 h-4" />
               Add Task
@@ -153,6 +233,15 @@ const Tasks = () => {
           </TasksContainer>
         </div>
       </div>
+
+      {/* Task Form Modal */}
+      <TaskForm
+        open={isFormOpen}
+        onOpenChange={handleFormClose}
+        task={editingTask}
+        initialStatus={initialStatus}
+        onSubmit={handleFormSubmit}
+      />
     </div>
   );
 };
