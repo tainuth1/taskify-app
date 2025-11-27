@@ -11,6 +11,7 @@
 import { TaskResponse, TaskStatus } from "@/types/dahboard";
 import { apiClient } from "./apiClient";
 import { ApiError } from "./authService";
+import { TaskDetailResponse } from "@/types/task";
 
 // ============================================================================
 // Type Definitions
@@ -149,6 +150,27 @@ export const updateTask = async (
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+};
+
+/**
+ * Get the detail of a task
+ * @param taskId - The ID of the task to get the detail of
+ * @returns The detail of the task
+ *
+ *  * @example
+ * ```typescript
+ * const taskDetail = await getTaskDetail("123");
+ * ```
+ */
+export const getTaskDetail = async (
+  taskId: string
+): Promise<ApiResponse<TaskDetailResponse>> => {
+  return await apiClient<ApiResponse<TaskDetailResponse>>(
+    `/api/tasks/${taskId}`,
+    {
+      method: "GET",
+    }
+  );
 };
 
 /**

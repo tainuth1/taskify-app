@@ -16,7 +16,9 @@ import {
   deleteTask,
   createTask,
   updateTask,
+  getTaskDetail,
 } from "@/services/taskService";
+import { TaskDetailResponse } from "@/types/task";
 
 // ============================================================================
 // Async Thunks
@@ -33,6 +35,7 @@ import {
  */
 interface TaskState {
   tasks: TaskResponse[];
+  task: TaskDetailResponse | null;
   isLoading: boolean;
   error: string | null;
 }
@@ -43,6 +46,7 @@ interface TaskState {
 
 const initialState: TaskState = {
   tasks: [],
+  task: null,
   isLoading: false,
   error: null,
 };
@@ -202,6 +206,30 @@ export const deleteTaskAsync = createAsyncThunk<
   }
 });
 
+/**
+ * Get the detail of a task
+ *
+ * @param taskId - The ID of the task to get the detail of
+ * @returns The detail of the task
+ *
+ * @example
+ * ```typescript
+ * const taskDetail = await getTaskDetailAsync("123");
+ * ```
+ */
+export const getTaskDetailAsync = createAsyncThunk<
+  TaskDetailResponse,
+  string,
+  { rejectValue: ApiError }
+>("tasks/getTaskDetail", async (taskId, { rejectWithValue }) => {
+  try {
+    const response = await getTaskDetail(taskId);
+    return response.data;
+  } catch (error) {
+    return rejectWithValue(error as ApiError);
+  }
+});
+
 const taskSlice = createSlice({
   name: "tasks",
   initialState,
@@ -242,6 +270,21 @@ const taskSlice = createSlice({
     builder.addCase(getTasksAsync.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload?.message || "Failed to get tasks";
+    });
+
+    // get task by id
+    builder.addCase(getTaskDetailAsync.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(getTaskDetailAsync.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.error = null;
+      state.task = action.payload;
+    });
+    builder.addCase(getTaskDetailAsync.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload?.message || "Failed to get task detail";
     });
 
     // update task status
