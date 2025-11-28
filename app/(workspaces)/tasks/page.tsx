@@ -156,7 +156,7 @@ const Tasks = () => {
       </div>
 
       {/* Main content - Task containers organized by status */}
-      <div className="grid grid-cols-12 gap-5 mt-5">
+      <div className="grid grid-cols-12 gap-5 mt-7">
         {/* PENDING Tasks Container */}
         <div className="lg:col-span-3 md:col-span-4 sm:col-span-6 col-span-12 ">
           <TasksContainer

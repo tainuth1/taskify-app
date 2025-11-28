@@ -12,12 +12,14 @@ import { apiClient } from "@/services/apiClient";
 import { RootState, useAppSelector } from "@/store";
 import { DashboardApiResponse, DashboardResponse } from "@/types/dahboard";
 import {
+  CalendarClock,
   FilePlusCorner,
   FileSearchCorner,
   FolderPlus,
   FolderSearch,
   PlusCircle,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function Workspace() {
@@ -148,13 +150,15 @@ export default function Workspace() {
                             task.
                           </p>
                         </div>
-                        <Button
-                          variant="default"
-                          className="mt-2 cursor-pointer"
-                        >
-                          <FilePlusCorner className="w-4 h-4" />
-                          Create Task
-                        </Button>
+                        <Link href={"/tasks"}>
+                          <Button
+                            variant="default"
+                            className="mt-2 cursor-pointer"
+                          >
+                            <FilePlusCorner className="w-4 h-4" />
+                            Create Task
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   )}
@@ -182,13 +186,15 @@ export default function Workspace() {
                             task in your projects.
                           </p>
                         </div>
-                        <Button
-                          variant="default"
-                          className="mt-2 cursor-pointer"
-                        >
-                          <FilePlusCorner className="w-4 h-4" />
-                          Create Task for a project
-                        </Button>
+                        <Link href={"/projects"}>
+                          <Button
+                            variant="default"
+                            className="mt-2 cursor-pointer"
+                          >
+                            <FilePlusCorner className="w-4 h-4" />
+                            Create Task for a project
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   )}
@@ -207,10 +213,20 @@ export default function Workspace() {
                   <DueTaskCard key={index} task={task} />
                 ))
               ) : (
-                <div className="col-span-3 flex flex-col items-center justify-center h-[262.5px]">
-                  <p className="text-sm text-gray-500">
-                    No due soon tasks found
-                  </p>
+                <div className="w-full flex flex-col items-center justify-center h-[262.5px]">
+                  <div className="flex flex-col items-center gap-4 text-center">
+                    <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+                      <CalendarClock className="w-6 h-6 text-orange-600" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        No due soon tasks found
+                      </h3>
+                      <p className="text-sm text-gray-500 max-w-md">
+                        You are all caught up! There are no tasks due soon.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

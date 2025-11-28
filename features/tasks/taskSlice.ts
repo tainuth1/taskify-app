@@ -18,7 +18,27 @@ import {
   updateTask,
   getTaskDetail,
 } from "@/services/taskService";
-import { TaskDetailResponse } from "@/types/task";
+import {
+  TaskDetailResponse,
+  CommentResponse,
+  SubTaskResponse,
+} from "@/types/task";
+import {
+  createComment,
+  CreateCommentRequest,
+  deleteComment,
+  updateComment,
+  UpdateCommentRequest,
+} from "@/services/comment";
+import {
+  createSubTask,
+  CreateSubTaskRequest,
+  deleteSubTask,
+  updateSubTask,
+  UpdateSubTaskRequest,
+  updateSubTaskStatus,
+  UpdateSubTaskStatusRequest,
+} from "@/services/subtask";
 
 // ============================================================================
 // Async Thunks
@@ -230,6 +250,132 @@ export const getTaskDetailAsync = createAsyncThunk<
   }
 });
 
+/**
+ * Create a comment for a task
+ *
+ * @param taskId - The ID of the task
+ * @param data - The comment data
+ * @returns The created comment
+ */
+export const createCommentAsync = createAsyncThunk<
+  CommentResponse,
+  { taskId: string; data: CreateCommentRequest },
+  { rejectValue: ApiError }
+>("tasks/createComment", async ({ taskId, data }, { rejectWithValue }) => {
+  try {
+    const response = await createComment(taskId, data);
+    return response.data;
+  } catch (error) {
+    return rejectWithValue(error as ApiError);
+  }
+});
+
+/**
+ * Delete a comment from a task
+ *
+ * @param commentId - The ID of the comment to delete
+ * @returns The deleted comment
+ */
+export const deleteCommentAsync = createAsyncThunk<
+  string,
+  string,
+  { rejectValue: ApiError }
+>("tasks/deleteComment", async (commentId, { rejectWithValue }) => {
+  try {
+    await deleteComment(commentId);
+    return commentId;
+  } catch (error) {
+    return rejectWithValue(error as ApiError);
+  }
+});
+
+/**
+ * Update a comment
+ *
+ * @param commentId - The ID of the comment to update
+ * @param data - The update data
+ * @returns The updated comment
+ */
+export const updateCommentAsync = createAsyncThunk<
+  CommentResponse,
+  { commentId: string; data: UpdateCommentRequest },
+  { rejectValue: ApiError }
+>("tasks/updateComment", async ({ commentId, data }, { rejectWithValue }) => {
+  try {
+    const response = await updateComment(commentId, data);
+    return response.data;
+  } catch (error) {
+    return rejectWithValue(error as ApiError);
+  }
+});
+
+/**
+ * Create a subtask for a task
+ */
+export const createSubTaskAsync = createAsyncThunk<
+  SubTaskResponse,
+  { data: CreateSubTaskRequest },
+  { rejectValue: ApiError }
+>("tasks/createSubTask", async ({ data }, { rejectWithValue }) => {
+  try {
+    const response = await createSubTask(data);
+    return response.data;
+  } catch (error) {
+    return rejectWithValue(error as ApiError);
+  }
+});
+
+/**
+ * Update a subtask
+ */
+export const updateSubTaskAsync = createAsyncThunk<
+  SubTaskResponse,
+  { subTaskId: string; data: UpdateSubTaskRequest },
+  { rejectValue: ApiError }
+>("tasks/updateSubTask", async ({ subTaskId, data }, { rejectWithValue }) => {
+  try {
+    const response = await updateSubTask(subTaskId, data);
+    return response.data;
+  } catch (error) {
+    return rejectWithValue(error as ApiError);
+  }
+});
+
+/**
+ * Update a subtask status
+ */
+export const updateSubTaskStatusAsync = createAsyncThunk<
+  SubTaskResponse,
+  { subTaskId: string; data: UpdateSubTaskStatusRequest },
+  { rejectValue: ApiError }
+>(
+  "tasks/updateSubTaskStatus",
+  async ({ subTaskId, data }, { rejectWithValue }) => {
+    try {
+      const response = await updateSubTaskStatus(subTaskId, data);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error as ApiError);
+    }
+  }
+);
+
+/**
+ * Delete a subtask
+ */
+export const deleteSubTaskAsync = createAsyncThunk<
+  SubTaskResponse,
+  string,
+  { rejectValue: ApiError }
+>("tasks/deleteSubTask", async (subTaskId, { rejectWithValue }) => {
+  try {
+    const response = await deleteSubTask(subTaskId);
+    return response.data;
+  } catch (error) {
+    return rejectWithValue(error as ApiError);
+  }
+});
+
 const taskSlice = createSlice({
   name: "tasks",
   initialState,
@@ -327,6 +473,14 @@ const taskSlice = createSlice({
       if (taskIndex !== -1) {
         state.tasks[taskIndex] = updatedTask;
       }
+
+      // Update the task detail in the local state if it matches
+      if (state.task && state.task.id === updatedTask.id) {
+        state.task = {
+          ...state.task,
+          ...updatedTask,
+        };
+      }
     });
     builder.addCase(updateTaskAsync.rejected, (state, action) => {
       state.isLoading = false;
@@ -347,6 +501,130 @@ const taskSlice = createSlice({
     builder.addCase(deleteTaskAsync.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload?.message || "Failed to delete task";
+    });
+
+    // create comment
+    builder.addCase(createCommentAsync.pending, (state) => {
+      state.error = null;
+    });
+    builder.addCase(createCommentAsync.fulfilled, (state, action) => {
+      state.error = null;
+      // Add the created comment to the local task detail without refetching
+      if (state.task) {
+        // Ensure comments array exists
+        if (!state.task.comments) {
+          state.task.comments = [];
+        }
+        state.task.comments.push(action.payload);
+      }
+    });
+    builder.addCase(createCommentAsync.rejected, (state, action) => {
+      state.error = action.payload?.message || "Failed to create comment";
+    });
+
+    // delete comment
+    builder.addCase(deleteCommentAsync.pending, (state) => {
+      state.error = null;
+    });
+    builder.addCase(deleteCommentAsync.fulfilled, (state, action) => {
+      state.error = null;
+      // Remove the deleted comment from the local task detail without refetching
+      if (state.task && state.task.comments) {
+        state.task.comments = state.task.comments.filter(
+          (comment) => comment.id !== action.payload
+        );
+      }
+    });
+    builder.addCase(deleteCommentAsync.rejected, (state, action) => {
+      state.error = action.payload?.message || "Failed to delete comment";
+    });
+
+    // update comment
+    builder.addCase(updateCommentAsync.pending, (state) => {
+      state.error = null;
+    });
+    builder.addCase(updateCommentAsync.fulfilled, (state, action) => {
+      state.error = null;
+      // Update the comment in the local task detail without refetching
+      if (state.task && state.task.comments) {
+        const updatedComment = action.payload;
+        const index = state.task.comments.findIndex(
+          (c) => c.id === updatedComment.id
+        );
+        if (index !== -1) {
+          state.task.comments[index] = updatedComment;
+        }
+      }
+    });
+    builder.addCase(updateCommentAsync.rejected, (state, action) => {
+      state.error = action.payload?.message || "Failed to update comment";
+    });
+
+    // subtask reducers
+    builder.addCase(createSubTaskAsync.fulfilled, (state, action) => {
+      if (state.task) {
+        if (!state.task.subtasks) {
+          state.task.subtasks = [];
+        }
+        state.task.subtasks.push(action.payload);
+        // update subtask count
+        if (state.task.subtask) {
+          state.task.subtask.total += 1;
+        }
+      }
+    });
+
+    builder.addCase(updateSubTaskAsync.fulfilled, (state, action) => {
+      if (state.task && state.task.subtasks) {
+        const index = state.task.subtasks.findIndex(
+          (st) => st.id === action.payload.id
+        );
+        if (index !== -1) {
+          state.task.subtasks[index] = {
+            ...state.task.subtasks[index],
+            ...action.payload,
+          };
+        }
+      }
+    });
+
+    builder.addCase(updateSubTaskStatusAsync.fulfilled, (state, action) => {
+      if (state.task && state.task.subtasks) {
+        const index = state.task.subtasks.findIndex(
+          (st) => st.id === action.payload.id
+        );
+        if (index !== -1) {
+          const oldStatus = state.task.subtasks[index].status;
+          const newStatus = action.payload.status;
+          state.task.subtasks[index] = action.payload;
+
+          // update counts if status changed
+          if (oldStatus !== newStatus && state.task.subtask) {
+            if (newStatus === TaskStatus.DONE) {
+              state.task.subtask.done += 1;
+            } else if (oldStatus === TaskStatus.DONE) {
+              state.task.subtask.done -= 1;
+            }
+          }
+        }
+      }
+    });
+
+    builder.addCase(deleteSubTaskAsync.fulfilled, (state, action) => {
+      if (state.task && state.task.subtasks) {
+        const deletedSubtask = action.payload;
+        state.task.subtasks = state.task.subtasks.filter(
+          (st) => st.id !== deletedSubtask.id
+        );
+
+        // update counts
+        if (state.task.subtask) {
+          state.task.subtask.total -= 1;
+          if (deletedSubtask.status === TaskStatus.DONE) {
+            state.task.subtask.done -= 1;
+          }
+        }
+      }
     });
   },
 });
