@@ -77,7 +77,6 @@ export function Sidebar() {
       id: "projects",
       label: "Projects",
       items: [
-        { id: "calendar", name: "Calendar", icon: Calendar, href: "/calendar" },
         {
           id: "projects",
           name: "Projects",
@@ -85,6 +84,7 @@ export function Sidebar() {
           badge: sidebarData?.projects.projects,
           href: "/projects",
         },
+        { id: "calendar", name: "Calendar", icon: Calendar, href: "/calendar" },
       ],
     },
     {
@@ -123,7 +123,7 @@ export function Sidebar() {
       {isOpen && (
         <div className="w-72 fixed top-0 h-full bg-white border-r border-gray-200 flex flex-col overflow-y-auto">
           {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="px-6 py-[15.5px] border-b border-gray-200 flex items-center justify-between">
             <div className="w-full flex justify-center">
               <Image
                 src={"/taskify-logo-light.png"}
@@ -153,7 +153,7 @@ export function Sidebar() {
                   {menu.items.length > 0 &&
                     menu.items.map((submenu) => {
                       const isActive =
-                        submenu.href && pathname === submenu.href;
+                        submenu.href && pathname.includes(submenu.href);
                       return submenu.href ? (
                         <Link
                           href={submenu.href}

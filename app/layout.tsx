@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Taskify",
   description: "A task management system",
+  icons: {
+    icon: "/takify-square.png",
+  },
 };
 
 export default function RootLayout({
