@@ -23,6 +23,7 @@ import {
   EditIcon,
   GripVertical,
   Check,
+  Loader2Icon,
 } from "lucide-react";
 import { FileEdit } from "lucide-react";
 import { useEffect, use, useState, useRef } from "react";
@@ -387,7 +388,7 @@ export default function TaskDetailPage({
       {/* Main content */}
       <div className="grid grid-cols-3">
         {/* Left section */}
-        <div className="col-span-2">
+        <div className="col-span-2 border-r border-gray-200">
           <div className="p-6 space-y-2">
             <h2 className="text-2xl font-bold">{task?.title}</h2>
             <p className="text-sm text-gray-500">{task?.description}</p>
@@ -396,7 +397,13 @@ export default function TaskDetailPage({
             <div className="flex items-center">
               <h3 className="w-48 text-sm font-medium text-gray-600">Status</h3>
               <span className="text-xs bg-blue-50 text-blue-600 px-4 py-1 rounded-full capitalize">
-                {task?.status}
+                {task?.status
+                  .split("_")
+                  .map(
+                    (word) =>
+                      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                  )
+                  .join(" ")}
               </span>
             </div>
             <div className="flex items-center">
@@ -721,9 +728,9 @@ export default function TaskDetailPage({
         {/* Right section */}
         <div className="col-span-1">
           {/* comment */}
-          <div className="p-6 border-l border-b border-gray-200">
+          <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-bold mb-4">Comments</h2>
-            <div className="space-y-2 mb-6 min-h-[400px] max-h-[400px] overflow-y-auto pr-2">
+            <div className="space-y-2 mb-6 max-h-[65vh] scrollbar-soft overflow-y-auto pr-2">
               {task?.comments && task.comments.length > 0 ? (
                 task.comments.map((comment) => (
                   <div
@@ -862,10 +869,6 @@ export default function TaskDetailPage({
                 </form>
               </div>
             </div>
-          </div>
-          {/* subtasks */}
-          <div className="p-6 border-l border-b border-gray-200">
-            <h2 className="text-lg font-bold">Activity</h2>
           </div>
         </div>
       </div>

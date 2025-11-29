@@ -1,5 +1,5 @@
 "use client";
- 
+
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
@@ -100,7 +100,7 @@ export function DeleteConfirmationModal({
               disabled={isLoading}
               className="min-w-[100px] cursor-pointer hover:bg-slate-100"
             >
-              Cancel
+              No, Keep it
             </Button>
             <Button
               type="button"
@@ -114,7 +114,7 @@ export function DeleteConfirmationModal({
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 </>
               ) : (
-                "Delete"
+                "Yes, Delete"
               )}
             </Button>
           </DialogFooter>
